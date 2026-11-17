@@ -94,6 +94,21 @@ async function fetchBounded(rawUrl: string, options: { timeoutMs: number; userAg
     throw new Error('Too many redirects.');
 }
 
+async function fetchManifest(origin: string, allowedHost: string, options: { timeoutMs: number; userAgent: string }): Promise<{ text: string; sourceType: string } | undefined> {
+    for (const name of ['llms-full.txt', 'llms.txt'] as const) {
+        try {
+            const { text } = await fetchBounded(new URL(`/${name}`, origin).href, {
+                ...options, maxBytes: MAX_MANIFEST_BYTES, allowedHost,
+            });
+            log.info(`Using ${name} for ${origin}`);
+            return { text, sourceType: name };
+        } catch (error) {
+            log.info(`${name} not usable for ${origin}: ${String(error)}`);
+        }
+    }
+    return undefined;
+}
+
 function canonicalUrl(raw: string): string {
     const url = new URL(raw);
     url.hash = '';
@@ -136,8 +151,41 @@ function sitemapLinks(xml: string, base: URL, allowedHost: string): string[] {
     return [...urls];
 }
 
-function extractRecord(html: string, finalUrl: string, domain: string, sourceType: string, includeContent: boolean, maxContentChars: number, lastModified?: string): IndexRecord {
-    const $ = cheerio.load(html);
+function resourceFormat(url: string, contentType: string): 'html' | 'text' | undefined {
+    const mediaType = contentType.split(';', 1)[0]!.trim().toLowerCase();
+    if (mediaType === 'text/html' || mediaType === 'application/xhtml+xml') return 'html';
+    if (mediaType === 'text/markdown' || mediaType === 'text/x-markdown' || mediaType === 'text/plain') return 'text';
+
+    const pathname = new URL(url).pathname;
+    const filename = pathname.split('/').pop() ?? '';
+    const dot = filename.lastIndexOf('.');
+    const extension = dot > 0 ? filename.slice(dot + 1).toLowerCase() : '';
+    const genericType = !mediaType || mediaType === 'application/octet-stream' || mediaType === 'binary/octet-stream';
+    if (!genericType) return undefined;
+    if (['html', 'htm'].includes(extension)) return 'html';
+    if (['md', 'markdown', 'txt'].includes(extension) || !extension) return 'text';
+    return undefined;
+}
+
+function extractRecord(body: string, finalUrl: string, domain: string, sourceType: string, format: 'html' | 'text', includeContent: boolean, maxContentChars: number, lastModified?: string): IndexRecord {
+    if (format === 'text') {
+        const lines = body.split(/\r?\n/);
+        const heading = lines.find((line) => /^#{1,6}\s+\S/.test(line.trim()))?.trim().replace(/^#{1,6}\s+/, '');
+        const firstLine = lines.find((line) => line.trim())?.trim() ?? '';
+        const title = heading || firstLine.replace(/^[-*+]\s+/, '').slice(0, 200);
+        const description = lines.find((line) => line.trim() && line.trim() !== firstLine && !/^#{1,6}\s/.test(line.trim()))?.trim() ?? '';
+        const content = includeContent
+            ? body.replace(/```[^\n]*\n?/g, '').replace(/`([^`]+)`/g, '$1').replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/^#{1,6}\s+/gm, '').replace(/\s+/g, ' ').trim().slice(0, maxContentChars)
+            : '';
+        const normalized = [title, description, content].join('\n').trim();
+        const contentHash = createHash('sha256').update(normalized || canonicalUrl(finalUrl)).digest('hex');
+        return {
+            url: canonicalUrl(finalUrl), domain, title, description, content, contentHash, sourceType,
+            structuredData: [], openGraph: {}, ...(lastModified ? { lastModified } : {}), indexedAt: new Date().toISOString(),
+        };
+    }
+
+    const $ = cheerio.load(body);
     $('script, style, noscript, template, svg, nav, footer, header, aside, form').remove();
     const meta = (selector: string) => $(selector).first().attr('content')?.trim() ?? '';
     const title = meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]') || $('title').first().text().trim();
@@ -209,11 +257,9 @@ await Actor.main(async () => {
         const domain = start.hostname.toLowerCase();
         startDomains.add(domain);
         add({ url: canonicalUrl(start.href), sourceType: 'start-url', domain });
-        for (const [path, sourceType] of [['/llms.txt', 'llms.txt'], ['/llms-full.txt', 'llms-full.txt']] as const) {
-            try {
-                const { text } = await fetchBounded(new URL(path, start.origin).href, { ...fetchOptions, maxBytes: MAX_MANIFEST_BYTES, allowedHost: domain });
-                for (const candidate of manifestLinks(text, start, domain, sourceType)) add(candidate);
-            } catch (error) { log.info(`No usable ${path} for ${domain}: ${String(error)}`); }
+        const manifest = await fetchManifest(start.origin, domain, fetchOptions);
+        if (manifest) {
+            for (const candidate of manifestLinks(manifest.text, start, domain, manifest.sourceType)) add(candidate);
         }
         const sitemapUrls = new Set([new URL('/sitemap.xml', start.origin).href]);
         try {
@@ -241,12 +287,13 @@ await Actor.main(async () => {
         try {
             const { text, response } = await fetchBounded(candidate.url, { ...fetchOptions, maxBytes: MAX_HTML_BYTES, allowedHost: candidate.domain });
             const contentType = response.headers.get('content-type') ?? '';
-            if (!contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
-                log.info(`Skipping non-HTML resource ${candidate.url}`);
+            const format = resourceFormat(candidate.url, contentType);
+            if (!format) {
+                log.info(`Skipping unsupported resource ${candidate.url} (${contentType || 'unknown content type'})`);
                 continue;
             }
             fetched += 1;
-            const record = extractRecord(text, candidate.url, candidate.domain, candidate.sourceType, input.includeContent !== false, maxContentChars, response.headers.get('last-modified') ?? undefined);
+            const record = extractRecord(text, candidate.url, candidate.domain, candidate.sourceType, format, input.includeContent !== false, maxContentChars, response.headers.get('last-modified') ?? undefined);
             if (input.changeMode === 'changes' && previous.get(record.url) === record.contentHash) continue;
             await Actor.pushData(record);
             emitted += 1;

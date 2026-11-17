@@ -9,7 +9,7 @@ Build a clean, domain-scoped JSON search index from publisher-hosted `llms.txt` 
 3. Set `APIFY_TOKEN` in your environment if running on the Apify platform; local runs can use the Apify CLI or `npm run dev` with Apify local storage configured.
 4. Provide one or more start URLs such as `https://example.com/`.
 
-The Actor checks the standard manifest paths, parses sitemap URLs and robots.txt sitemap declarations, and fetches only HTML pages on each starting hostname. It does not execute JavaScript or scrape search-engine results pages.
+The Actor checks the standard manifest paths, parses sitemap URLs and robots.txt sitemap declarations, and fetches HTML, XHTML, Markdown, and plain-text resources on each starting hostname. It does not execute JavaScript or scrape search-engine results pages.
 
 ## Input form layout
 

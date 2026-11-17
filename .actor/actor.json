@@ -42,7 +42,7 @@
       "includeContent": {
         "title": "Include readable page content",
         "type": "boolean",
-        "description": "Extract a bounded plain-text passage from each HTML page in addition to metadata.",
+        "description": "Extract a bounded plain-text passage from each supported HTML, Markdown, or plain-text resource.",
         "editor": "checkbox",
         "default": true
       },
