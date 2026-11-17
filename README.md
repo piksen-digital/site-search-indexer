@@ -1,70 +1,70 @@
-# Site Search Indexer & Custom Search Migration Bridge
+# Site Search Indexer — llms.txt & Schema.org to Clean JSON
 
-Build a clean, domain-scoped JSON search index from publisher-hosted `llms.txt` / `llms-full.txt`, sitemaps, Schema.org JSON-LD, Open Graph tags, and standard HTML metadata. Designed as a deterministic alternative foundation for site-search and RAG pipelines—not a Google SERP scraper.
+Build a domain-scoped, structured JSON search index from **publisher-hosted manifests** — `llms.txt`, `llms-full.txt`, sitemaps, Schema.org JSON-LD, Open Graph, and standard HTML metadata. No SERP scraping, no anti-bot friction, no layout-churn breakage.
+
+Designed as a deterministic replacement foundation for site-search and RAG pipelines, and a practical migration path off the **Google Custom Search JSON API**, which shuts down **January 1, 2027**.
+
+---
+
+## Why this Actor
+
+| Problem | This Actor |
+|---|---|
+| Google CSE JSON API shuts down Jan 1, 2027 | Domain-scoped index you own, from the site's own manifests |
+| SERP scraping breaks on layout changes and anti-bot walls | Reads publisher-sanctioned `llms.txt` / sitemaps only |
+| LLM pipelines need grounded, current facts | Returns bounded, hashable page text ready for retrieval |
+| Existing crawlers return raw HTML | Returns clean JSON: title, description, content, JSON-LD, Open Graph |
+
+---
 
 ## Quick start
 
-1. Open this repository in a Codespace.
-2. Run `npm install` and `npm run build`.
-3. Set `APIFY_TOKEN` in your environment if running on the Apify platform; local runs can use the Apify CLI or `npm run dev` with Apify local storage configured.
-4. Provide one or more start URLs such as `https://example.com/`.
+1. Click **Try for free** on this page.
+2. Enter one or more start URLs — for example `https://docs.yourcompany.com/`.
+3. Set **Maximum pages** (start with 5–10 for a trial).
+4. Click **Start**.
 
-The Actor checks the standard manifest paths, parses sitemap URLs and robots.txt sitemap declarations, and fetches HTML, XHTML, Markdown, and plain-text resources on each starting hostname. It does not execute JavaScript or scrape search-engine results pages.
+The Actor checks the standard manifest paths first (`/llms-full.txt`, `/llms.txt`), then sitemaps and `robots.txt` declarations, and fetches HTML, Markdown, and plain-text resources **only on the starting hostname**. It does not execute JavaScript and never touches search-engine results pages.
 
-## Input form layout
+**First run is free** up to the free-tier page limit.
 
-The Console form is organized into **Index sources**, **Limits and output**, **Incremental updates**, and **Network behavior**. Defaults are deliberately bounded: 100 pages, 6,000 content characters per page, sequential requests, a 20-second request timeout, and a 2 GB Actor memory default. Input limits are checked again by the runtime.
+---
 
-- **Start URLs**: required list of HTTP(S) pages/site roots (up to 20 are used).
-- **Maximum pages**: unique page-fetch cap (1–500).
-- **Include readable page content** and **Maximum content characters per page**: opt into bounded text extraction.
-- **Indexing mode**: Full index or only new/changed records.
-- **Previous index JSON URL**: in Changes mode, optional public JSON array or `{ "items": [...] }` containing prior `url` and `contentHash` fields.
-- **Request timeout** and **HTTP User-Agent**: network controls.
+## Inputs
+
+Grouped in the Console as *Index sources*, *Limits and output*, *Incremental updates*, and *Network behavior*.
+
+| Input | Default | Notes |
+|---|---|---|
+| **Start URLs** *(required)* | — | HTTP(S) pages or site roots. All discovered links stay on the same hostname. |
+| **Maximum pages** | 100 | Hard cap on unique pages emitted (1–500). |
+| **Include readable page content** | on | Extracts bounded text per page. |
+| **Maximum content characters** | 6,000 | Per-page text cap when content is enabled. |
+| **Indexing mode** | Full | `Full` emits everything; `Changes` emits only new/changed pages. |
+| **Previous index JSON URL** | — | In `Changes` mode, a public JSON array (or `{ items: [...] }`) with prior `url` and `contentHash` fields. |
+| **Request timeout** | 20 s | Applies to every request. |
+| **HTTP User-Agent** | `SiteSearchIndexer/1.0` | Identify your client; respect each site's terms and `robots` policy. |
+
+All limits are enforced again at runtime, not only in the form.
+
+---
 
 ## Output
 
-Each default-dataset item is a page record with canonical URL, hostname, title, description, bounded text, SHA-256 content hash, discovery source, JSON-LD objects, selected Open Graph metadata, language, last-modified header, and indexed timestamp. The `OUTPUT` key-value record contains run counts and domains. The output schema and dataset schema are in `.actor/`.
+Each dataset item is one page:
 
-Use the dataset API's JSON format for an API response, for example:
-
-```text
-GET https://api.apify.com/v2/datasets/{datasetId}/items?format=json
-```
-
-This produces JSON items suitable for a lightweight retriever. The implementation is an indexing/migration bridge; a dedicated full-text retrieval API, OAuth source integrations, and n8n/LangGraph adapters are future integration work.
-
-## Incremental runs
-
-Pass the previous run's dataset JSON URL as `previousIndexUrl` and select **Only new or changed pages**. The Actor compares canonical URL and `contentHash`, emitting only pages with new or changed hashes. Deleted pages are not emitted as tombstones; consumers can reconcile against a full index when needed. The supplied previous-index URL must be publicly readable.
-
-## Pricing setup
-
-`pricing.json` is a ready-to-review pay-per-event proposal containing the event **name**, **title**, **description**, and USD **price** for each event. It includes the Actor's page and completion events plus Apify's optional runtime-generated actor-start and default-dataset-item events.
-
-Pricing is not activated by committing this file: configure it in the Actor's Apify Console pricing settings (or through the supported Actor API) and review all prices before publishing. The code calls `Actor.charge()` for `page-indexed` and `index-completed` only when the platform provides PPE configuration. The default dataset item event and Actor-start event are platform-managed. Prices are illustrative starting points, not a financial recommendation.
-
-## Safety and operational notes
-
-- Only HTTP(S) and the exact hostname of each start URL are permitted for discovered links and redirects; local/private IP ranges and reserved local names are rejected.
-- Redirects are capped, response sizes are bounded, requests are sequential, and page count/content lengths are capped.
-- The Actor does not bypass access controls or anti-bot measures. Respect publisher terms, robots guidance, and applicable law; request failures are logged and skipped.
-- This implementation is metadata/content indexing, not a guarantee of full-text search relevance. Consumers can use `content`, `title`, and `description` to build their own search/RAG index.
-
-## Files
-
-- `.actor/actor.json` — Actor definition, 0.0 version, 2 GB default memory, and embedded Console input schema.
-- `.actor/input_schema.json` — standalone copy of the input form schema for ease of review.
-- `.actor/dataset_schema.json` and `.actor/output_schema.json` — dataset and run output contracts.
-- `pricing.json` — suggested PPE event definitions for Apify Console configuration.
-- `.devcontainer/devcontainer.json` — Codespaces Node/TypeScript setup.
-
-## Commands
-
-```bash
-npm install
-npm run build
-npm start
-```
-
-The Dockerfile uses Apify's Node 20 Actor image and compiles TypeScript during the image build. Node 20+ is supported.
+```json
+{
+  "url": "https://hono.dev/docs/concepts/routers",
+  "domain": "hono.dev",
+  "title": "Routers - Hono",
+  "description": "Web framework built on Web Standards...",
+  "content": "The routers are the most important features for Hono...",
+  "contentHash": "ddeb066d4ca7833224907f11b374b6d5...",
+  "sourceType": "llms-full.txt",
+  "language": "en-US",
+  "structuredData": [],
+  "openGraph": { "og:type": "website", "og:image": "https://hono.dev/images/hono-title.png" },
+  "lastModified": null,
+  "indexedAt": "2026-11-17T15:57:55.480Z"
+}

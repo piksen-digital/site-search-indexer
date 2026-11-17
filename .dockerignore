@@ -1,0 +1,13 @@
+cat > .dockerignore <<'EOF'
+node_modules
+storage
+.git
+.gitignore
+*.log
+.env
+.env.*
+.vscode
+.idea
+dist
+*.tsbuildinfo
+EOF
