@@ -1,0 +1,21 @@
+{
+  "$schema": "https://apify.com/schemas/v1/dataset.schema.json",
+  "title": "Site search index page",
+  "description": "One successfully parsed page in the site-scoped search index.",
+  "type": "object",
+  "fields": {
+    "url": { "type": "string", "description": "Canonicalized page URL." },
+    "domain": { "type": "string", "description": "Hostname used for the domain-scoped index." },
+    "title": { "type": "string", "description": "Page title from metadata or document title." },
+    "description": { "type": "string", "description": "Description from Schema.org, Open Graph, or standard metadata." },
+    "content": { "type": "string", "description": "Bounded readable page text; empty when disabled or unavailable." },
+    "contentHash": { "type": "string", "description": "SHA-256 hash used for incremental comparison." },
+    "sourceType": { "type": "string", "description": "Discovery source: start-url, llms.txt, llms-full.txt, or sitemap." },
+    "language": { "type": "string", "description": "Detected HTML language, when present." },
+    "structuredData": { "type": "array", "description": "Schema.org JSON-LD objects found on the page." },
+    "openGraph": { "type": "object", "description": "Selected Open Graph fields." },
+    "lastModified": { "type": "string", "description": "HTTP Last-Modified header, when provided." },
+    "indexedAt": { "type": "string", "description": "ISO timestamp when this page was indexed." }
+  },
+  "required": ["url", "domain", "title", "description", "content", "contentHash", "sourceType", "structuredData", "openGraph", "indexedAt"]
+}

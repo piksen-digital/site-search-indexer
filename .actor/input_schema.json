@@ -1,0 +1,83 @@
+{
+  "$schema": "https://apify.com/schemas/v1/input.ide.json",
+  "title": "Site Search Indexer input",
+  "description": "Index publicly accessible, domain-scoped pages using publisher-provided manifests and structured metadata.",
+  "type": "object",
+  "schemaVersion": 1,
+  "additionalProperties": false,
+  "properties": {
+    "startUrls": {
+      "title": "Start URLs",
+      "type": "array",
+      "description": "One or more pages or site roots to index. All discovered links must remain on the same hostname as a start URL.",
+      "editor": "stringList",
+      "items": { "type": "string", "pattern": "^https?://" },
+      "default": ["https://example.com/"],
+      "prefill": ["https://example.com/"],
+      "sectionCaption": "Index sources",
+      "sectionDescription": "The Actor checks llms.txt / llms-full.txt, sitemap.xml, and supplied pages. It never uses search-engine SERP pages."
+    },
+    "maxPages": {
+      "title": "Maximum pages",
+      "type": "integer",
+      "description": "Hard cap on unique pages fetched across all start URLs.",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 500,
+      "default": 100,
+      "sectionCaption": "Limits and output",
+      "sectionDescription": "Requests are sequential and domain-scoped. Raise limits carefully for large sites."
+    },
+    "includeContent": {
+      "title": "Include readable page content",
+      "type": "boolean",
+      "description": "Extract a bounded plain-text passage from each HTML page in addition to metadata.",
+      "editor": "checkbox",
+      "default": true
+    },
+    "maxContentChars": {
+      "title": "Maximum content characters per page",
+      "type": "integer",
+      "description": "Maximum extracted text characters stored per page when readable content is enabled.",
+      "editor": "number",
+      "minimum": 500,
+      "maximum": 20000,
+      "default": 6000
+    },
+    "changeMode": {
+      "title": "Indexing mode",
+      "type": "string",
+      "description": "Full emits all successfully indexed pages. Changes emits only new or changed pages when a previous index is supplied.",
+      "editor": "select",
+      "enum": ["full", "changes"],
+      "enumTitles": ["Full index", "Only new or changed pages"],
+      "default": "full",
+      "sectionCaption": "Incremental updates"
+    },
+    "previousIndexUrl": {
+      "title": "Previous index JSON URL",
+      "type": "string",
+      "description": "Optional publicly accessible JSON array (or { items: [...] }) from a prior run. Used to compare content hashes in Changes mode.",
+      "editor": "textfield",
+      "pattern": "^https?://"
+    },
+    "requestTimeoutSecs": {
+      "title": "Request timeout (seconds)",
+      "type": "integer",
+      "description": "Timeout applied to each manifest, sitemap, previous-index, and page request.",
+      "editor": "number",
+      "minimum": 5,
+      "maximum": 60,
+      "default": 20,
+      "sectionCaption": "Network behavior"
+    },
+    "userAgent": {
+      "title": "HTTP User-Agent",
+      "type": "string",
+      "description": "Identify your client when fetching publisher-hosted resources. Follow each site's published terms and robots policy.",
+      "editor": "textfield",
+      "default": "SiteSearchIndexer/1.0 (+https://apify.com/)"
+    }
+  },
+  "required": ["startUrls"]
+}

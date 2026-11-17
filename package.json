@@ -1,0 +1,24 @@
+{
+  "name": "site-search-indexer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Domain-scoped site search indexer and Google Custom Search migration bridge for Apify.",
+  "engines": { "node": ">=20.0.0" },
+  "scripts": {
+    "start": "node dist/main.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test dist/**/*.test.js",
+    "dev": "tsx watch src/main.ts"
+  },
+  "dependencies": {
+    "apify": "^3.4.0",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

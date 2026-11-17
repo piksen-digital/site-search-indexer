@@ -1,0 +1,34 @@
+{
+  "pricingInfos": [
+    {
+      "pricingModel": "PAY_PER_EVENT",
+      "pricingPerEvent": {
+        "actorChargeEvents": {
+          "page-indexed": {
+            "eventTitle": "Page indexed",
+            "eventDescription": "One page successfully fetched, parsed, and stored as an index record.",
+            "eventPriceUsd": 0.001
+          },
+          "index-completed": {
+            "eventTitle": "Index completed",
+            "eventDescription": "Charged once after a successful index run.",
+            "eventPriceUsd": 0.01,
+            "isOneTimeEvent": true,
+            "isPrimaryEvent": true
+          },
+          "apify-actor-start": {
+            "eventTitle": "Actor start",
+            "eventDescription": "Apify runtime event charged once per GB of memory at run start.",
+            "eventPriceUsd": 0.005,
+            "isOneTimeEvent": true
+          },
+          "apify-default-dataset-item": {
+            "eventTitle": "Dataset item",
+            "eventDescription": "Apify runtime event charged for every item stored in the default dataset.",
+            "eventPriceUsd": 0.0005
+          }
+        }
+      }
+    }
+  ]
+}

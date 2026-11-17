@@ -1,0 +1,21 @@
+{
+  "$schema": "https://apify.com/schemas/v1/output.schema.json",
+  "actorOutputSchemaVersion": 1,
+  "title": "Site Search Indexer output",
+  "description": "Dataset link, compact run summary, and JSON search endpoint.",
+  "type": "object",
+  "properties": {
+    "searchIndex": {
+      "type": "string",
+      "title": "Indexed pages",
+      "description": "Run dataset in JSON format. Use the URL with ?format=json for a clean JSON array.",
+      "template": "{{links.apiDefaultDatasetUrl}}/items?format=json"
+    },
+    "summary": {
+      "type": "string",
+      "title": "Run summary",
+      "description": "Counts and source details for this indexing run.",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/OUTPUT"
+    }
+  }
+}

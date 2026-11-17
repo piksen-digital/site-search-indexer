@@ -1,0 +1,16 @@
+{
+  "name": "Site Search Indexer",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+      "settings": { "editor.formatOnSave": true, "typescript.tsdk": "node_modules/typescript/lib" }
+    }
+  },
+  "postCreateCommand": "npm install && npm run build",
+  "forwardPorts": [],
+  "remoteUser": "node"
+}
